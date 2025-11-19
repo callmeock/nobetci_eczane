@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MedicineSearchPage extends StatefulWidget {
   const MedicineSearchPage({super.key});
@@ -21,17 +22,21 @@ class _MedicineSearchPageState extends State<MedicineSearchPage> {
   List<MedicineResult> _allMedicines = [];
   List<MedicineResult> _results = [];
 
-  // 🔤 Alfabetik filtre için
+  // 🔤 Alfabetik filtre için – İngilizce alfabe
   final List<String> _letters = const [
-    'A', 'B', 'C', 'Ç', 'D', 'E', 'F', 'G', 'Ğ', 'H',
-    'I', 'İ', 'J', 'K', 'L', 'M', 'N', 'O', 'Ö', 'P',
-    'R', 'S', 'Ş', 'T', 'U', 'Ü', 'V', 'Y', 'Z',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+    'U', 'V', 'W', 'X', 'Y', 'Z',
   ];
   String? _selectedLetter; // null = hepsi
+
+  // ⚠️ Doktor uyarısı için
+  bool _dontShowWarningAgain = false;
 
   @override
   void initState() {
     super.initState();
+    _loadWarningPreference();
     _loadMedicinesFromCsv();
   }
 
@@ -40,6 +45,87 @@ class _MedicineSearchPageState extends State<MedicineSearchPage> {
     _queryController.dispose();
     super.dispose();
   }
+
+  // ------------------------------
+  // 1) UYARI PREF + DİYALOG
+  // ------------------------------
+
+  Future<void> _loadWarningPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    _dontShowWarningAgain = prefs.getBool('med_warning_dont_show') ?? false;
+
+    if (!_dontShowWarningAgain) {
+      // UI hazır olduktan sonra dialog göster
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showMedicalWarningDialog();
+      });
+    }
+  }
+
+  Future<void> _showMedicalWarningDialog() async {
+    bool localDontShow = _dontShowWarningAgain;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false, // mutlaka Tamam'a basılsın
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Önemli Uyarı'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Bu sayfa yalnızca bilgilendirme amaçlıdır.\n\n'
+                    'İlaçları mutlaka doktorunuzun önerdiği şekilde, '
+                    'doktorunuzun belirlediği dozlarda kullanınız.\n\n'
+                    'Bu uygulama tanı koymaz, tedavi önermez ve '
+                    'doktor muayenesinin yerine geçmez.',
+                  ),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    value: localDontShow,
+                    onChanged: (val) {
+                      setStateDialog(() {
+                        localDontShow = val ?? false;
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: const Text('Bu uyarıyı bir daha gösterme'),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    // Kararı kalıcı kaydet
+                    setState(() {
+                      _dontShowWarningAgain = localDontShow;
+                    });
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool(
+                      'med_warning_dont_show',
+                      localDontShow,
+                    );
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: const Text('Tamam'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ------------------------------
+  // 2) CSV YÜKLEME
+  // ------------------------------
 
   Future<void> _loadMedicinesFromCsv() async {
     try {
@@ -142,6 +228,10 @@ class _MedicineSearchPageState extends State<MedicineSearchPage> {
       });
     }
   }
+
+  // ------------------------------
+  // 3) ARAMA ALGORİTMASI
+  // ------------------------------
 
   // Arama algoritması (önce isim başı, sonra isim içi, sonra diğer alanlar)
   List<MedicineResult> _searchMedicines(String query) {
@@ -259,6 +349,10 @@ class _MedicineSearchPageState extends State<MedicineSearchPage> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  // ------------------------------
+  // 4) BUILD
+  // ------------------------------
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -325,7 +419,8 @@ class _MedicineSearchPageState extends State<MedicineSearchPage> {
                     ),
                   const SizedBox(height: 4),
                   Text(
-                    'Canlı arama 3 harften sonra devreye giriyor. Aşağıdan harf seçerek listeyi filtreleyebilirsin.',
+                    'Canlı arama 3 harften sonra devreye giriyor. '
+                    'Aşağıdan harf seçerek listeyi filtreleyebilirsin.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.grey.shade600,
                     ),
@@ -621,7 +716,7 @@ class _MedicineCard extends StatelessWidget {
   }
 }
 
-/// DETAY SAYFASI (Önceden yazdığımız tasarım aynı şekilde duruyor)
+/// DETAY SAYFASI
 class MedicineDetailPage extends StatelessWidget {
   final MedicineResult med;
 
@@ -915,7 +1010,8 @@ class MedicineDetailPage extends StatelessWidget {
 
               const SizedBox(height: 16),
               Text(
-                '⚠️ Bu bilgiler sadece bilgilendirme amaçlıdır. İlaçları mutlaka doktorunuzun önerdiği şekilde kullanınız.',
+                '⚠️ Bu bilgiler sadece bilgilendirme amaçlıdır. '
+                'İlaçları mutlaka doktorunuzun önerdiği şekilde kullanınız.',
                 style: TextStyle(
                   color: Colors.orange.shade800,
                   fontSize: 12.5,

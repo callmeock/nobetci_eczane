@@ -267,15 +267,19 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                     Expanded(
                       child: Column(
                         children: [
-                          const Text('Saat',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500)),
+                          const Text(
+                            'Saat',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                           Expanded(
                             child: CupertinoPicker(
                               scrollController: FixedExtentScrollController(
-                                initialItem:
-                                    initialHourIndex >= 0 ? initialHourIndex : 9,
+                                initialItem: initialHourIndex >= 0
+                                    ? initialHourIndex
+                                    : 9,
                               ),
                               itemExtent: 32,
                               onSelectedItemChanged: (index) {
@@ -286,7 +290,8 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                                     (h) => Center(
                                       child: Text(
                                         h.toString().padLeft(2, '0'),
-                                        style: const TextStyle(fontSize: 18),
+                                        style:
+                                            const TextStyle(fontSize: 18),
                                       ),
                                     ),
                                   )
@@ -303,10 +308,13 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                     Expanded(
                       child: Column(
                         children: [
-                          const Text('Dakika',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500)),
+                          const Text(
+                            'Dakika',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                           Expanded(
                             child: CupertinoPicker(
                               scrollController: FixedExtentScrollController(
@@ -323,7 +331,8 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                                     (m) => Center(
                                       child: Text(
                                         m.toString().padLeft(2, '0'),
-                                        style: const TextStyle(fontSize: 18),
+                                        style:
+                                            const TextStyle(fontSize: 18),
                                       ),
                                     ),
                                   )
@@ -337,8 +346,10 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                 ),
               ),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -379,6 +390,9 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
   }
 
   void _onAddReminder() async {
+    // 🔹 Önce klavyeyi kapat
+    FocusScope.of(context).unfocus();
+
     final name = _nameController.text.trim();
     final dose = _doseController.text.trim();
     final timesPerDay = int.tryParse(_timesPerDayController.text.trim());
@@ -426,7 +440,9 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
     await _saveRemindersToStorage();
     await _scheduleNotificationsFor(reminder);
 
-    _showSnackBar('İlaç hatırlatması kaydedildi ve bildirimler oluşturuldu.');
+    _showSnackBar(
+      'İlaç hatırlatması kaydedildi ve bildirimler oluşturuldu.',
+    );
   }
 
   void _onDeleteReminder(int index) async {
@@ -464,290 +480,311 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
         title: const Text('İlaç Hatırlatma'),
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // FORM
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _nameController,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'İlaç adı',
-                        hintText: 'Örn: Parol 500 mg',
+        // 🔹 Boş bir yere dokununca klavyeyi kapatmak için GestureDetector
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Column(
+            children: [
+              // FORM
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _doseController,
-                      textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Doz / Açıklama (opsiyonel)',
-                        hintText: 'Örn: 1 tablet',
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _mealTiming,
-                            decoration: const InputDecoration(
-                              labelText: 'Aç/Tok',
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Aç',
-                                child: Text('Aç'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Tok',
-                                child: Text('Tok'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Fark etmez',
-                                child: Text('Fark etmez'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() => _mealTiming = value);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _timesPerDayController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Günde kaç kez?',
-                              hintText: 'Örn: 2',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _daysController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Kaç gün?',
-                              hintText: 'Örn: 5',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: InkWell(
-                            onTap: _pickStartDate,
-                            borderRadius: BorderRadius.circular(14),
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Başlangıç tarihi',
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(_formatDate(_startDate)),
-                                  const Icon(Icons.calendar_today, size: 18),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    InkWell(
-                      onTap: _showTimePickerSheet,
-                      borderRadius: BorderRadius.circular(14),
-                      child: InputDecorator(
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _nameController,
+                        textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
-                          labelText: 'İlk hatırlatma saati',
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(_formatTimeOfDay(_firstReminderTime)),
-                            const Icon(Icons.access_time, size: 18),
-                          ],
+                          labelText: 'İlaç adı',
+                          hintText: 'Örn: Parol 500 mg',
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _onAddReminder,
-                        icon: const Icon(Icons.add_alert),
-                        label: const Text('Hatırlatma Ekle'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // LİSTE
-            Expanded(
-              child: _reminders.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Text(
-                          'Kullandığın ilaçları buraya ekleyerek,\n'
-                          'kullanım süresi boyunca takibini kolaylaştırabilirsin.\n\n'
-                          'Eklediğin ilaçlar için otomatik bildirimler kurulacak,\n'
-                          'süresi biten hatırlatmalar ise otomatik silinecek.',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey.shade700,
-                          ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _doseController,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: 'Doz / Açıklama (opsiyonel)',
+                          hintText: 'Örn: 1 tablet',
                         ),
                       ),
-                    )
-                  : ListView.builder(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      itemCount: _reminders.length,
-                      itemBuilder: (context, index) {
-                        final r = _reminders[index];
-                        final endDate = r.startDate
-                            .add(Duration(days: r.totalDays));
-                        return Card(
-                          margin:
-                              const EdgeInsets.symmetric(vertical: 6),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        r.name,
-                                        style: theme
-                                            .textTheme.titleMedium
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                      ),
-                                      onPressed: () =>
-                                          _onDeleteReminder(index),
-                                      tooltip: 'Sil',
-                                    ),
-                                  ],
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _mealTiming,
+                              decoration: const InputDecoration(
+                                labelText: 'Aç/Tok',
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Aç',
+                                  child: Text('Aç'),
                                 ),
-                                if (r.dose != null &&
-                                    r.dose!.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    r.dose!,
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                ],
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.schedule, size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Günde ${r.timesPerDay} kez • ${r.totalDays} gün',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
+                                DropdownMenuItem(
+                                  value: 'Tok',
+                                  child: Text('Tok'),
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.restaurant, size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      r.mealTiming,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                        Icons.calendar_today,
-                                        size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Başlangıç: ${_formatDate(r.startDate)}'
-                                      '  •  Bitiş: ${_formatDate(endDate)}',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.access_time, size: 18),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'İlk bildirim: ${_formatTimeOfDay(
-                                        TimeOfDay(
-                                          hour: r.firstReminderHour,
-                                          minute: r.firstReminderMinute,
-                                        ),
-                                      )}',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
+                                DropdownMenuItem(
+                                  value: 'Fark etmez',
+                                  child: Text('Fark etmez'),
                                 ),
                               ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                setState(() => _mealTiming = value);
+                              },
                             ),
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ],
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _timesPerDayController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Günde kaç kez?',
+                                hintText: 'Örn: 2',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _daysController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Kaç gün?',
+                                hintText: 'Örn: 5',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: InkWell(
+                              onTap: _pickStartDate,
+                              borderRadius: BorderRadius.circular(14),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Başlangıç tarihi',
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(_formatDate(_startDate)),
+                                    const Icon(Icons.calendar_today, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        onTap: _showTimePickerSheet,
+                        borderRadius: BorderRadius.circular(14),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'İlk hatırlatma saati',
+                          ),
+                          child: Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(_formatTimeOfDay(_firstReminderTime)),
+                              const Icon(Icons.access_time, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _onAddReminder,
+                          icon: const Icon(Icons.add_alert),
+                          label: const Text('Hatırlatma Ekle'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // LİSTE
+              Expanded(
+                child: _reminders.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Text(
+                            'Kullandığın ilaçları buraya ekleyerek,\n'
+                            'kullanım süresi boyunca takibini kolaylaştırabilirsin.\n\n'
+                            'Eklediğin ilaçlar için otomatik bildirimler kurulacak,\n'
+                            'süresi biten hatırlatmalar ise otomatik silinecek.',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding:
+                            const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                        itemCount: _reminders.length,
+                        itemBuilder: (context, index) {
+                          final r = _reminders[index];
+                          final endDate = r.startDate
+                              .add(Duration(days: r.totalDays));
+                          return Card(
+                            margin:
+                                const EdgeInsets.symmetric(vertical: 6),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          r.name,
+                                          style: theme
+                                              .textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontWeight:
+                                                FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete_outline,
+                                        ),
+                                        onPressed: () =>
+                                            _onDeleteReminder(index),
+                                        tooltip: 'Sil',
+                                      ),
+                                    ],
+                                  ),
+                                  if (r.dose != null &&
+                                      r.dose!.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      r.dose!,
+                                      style:
+                                          theme.textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.schedule,
+                                          size: 18),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Günde ${r.timesPerDay} kez • ${r.totalDays} gün',
+                                        style: theme
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
+                                          color:
+                                              Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.restaurant,
+                                          size: 18),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        r.mealTiming,
+                                        style: theme
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
+                                          color:
+                                              Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.calendar_today,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Başlangıç: ${_formatDate(r.startDate)}'
+                                        '  •  Bitiş: ${_formatDate(endDate)}',
+                                        style: theme
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
+                                          color:
+                                              Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.access_time,
+                                          size: 18),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'İlk bildirim: ${_formatTimeOfDay(
+                                          TimeOfDay(
+                                            hour: r.firstReminderHour,
+                                            minute:
+                                                r.firstReminderMinute,
+                                          ),
+                                        )}',
+                                        style: theme
+                                            .textTheme.bodySmall
+                                            ?.copyWith(
+                                          color:
+                                              Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
