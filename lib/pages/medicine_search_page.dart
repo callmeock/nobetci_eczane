@@ -3,6 +3,9 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../analytics_helper.dart';
+
+
 
 class MedicineSearchPage extends StatefulWidget {
   const MedicineSearchPage({super.key});
@@ -322,7 +325,8 @@ class _MedicineSearchPageState extends State<MedicineSearchPage> {
       _isLoading = true;
       _error = null;
     });
-
+    await AnalyticsHelper.logMedicineSearch(query: query);
+    
     _updateResults(fromSearchButton: true);
   }
 

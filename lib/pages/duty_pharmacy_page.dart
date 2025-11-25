@@ -11,6 +11,7 @@ import '../models/pharmacy.dart';
 import '../widgets/pharmacy_card.dart';
 import '../widgets/error_banner.dart';
 import '../widgets/empty_view.dart';
+import '../analytics_helper.dart'; // 🆕 EKLENDİ
 
 class DutyPharmacyPage extends StatefulWidget {
   const DutyPharmacyPage({super.key});
@@ -305,6 +306,17 @@ class _DutyPharmacyPageState extends State<DutyPharmacyPage> {
     });
 
     try {
+      // 🆕 ANALYTICS: Nöbetçi eczane aramasını logla
+      final source = (_position != null && !_locationFailed)
+          ? 'current_location'
+          : 'manual';
+
+      await AnalyticsHelper.logPharmacySearch(
+        city: city,
+        district: district.isEmpty ? null : district,
+        source: source,
+      );
+
       await _fetchDutyPharmacies(
         city: city,
         district: district.isEmpty ? null : district,
@@ -526,6 +538,7 @@ class _DutyPharmacyPageState extends State<DutyPharmacyPage> {
                   ),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
@@ -544,11 +557,27 @@ class _DutyPharmacyPageState extends State<DutyPharmacyPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Bugünün nöbetçi eczaneleri',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Bugünün nöbetçi eczaneleri',
+                                  style:
+                                      theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              if (pos != null)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.refresh,
+                                    size: 18,
+                                  ),
+                                  onPressed: _initLocation,
+                                  tooltip: 'Konumu yenile',
+                                ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -557,6 +586,27 @@ class _DutyPharmacyPageState extends State<DutyPharmacyPage> {
                               color: Colors.grey.shade700,
                             ),
                           ),
+                          if (pos != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.location_on, size: 16),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '${pos.latitude.toStringAsFixed(2)}, '
+                                    '${pos.longitude.toStringAsFixed(2)}',
+                                    style: theme.textTheme.bodySmall
+                                        ?.copyWith(
+                                      color: Colors.grey.shade700,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           if (_locationFailed)
                             Padding(
                               padding: const EdgeInsets.only(top: 4.0),
@@ -570,25 +620,6 @@ class _DutyPharmacyPageState extends State<DutyPharmacyPage> {
                         ],
                       ),
                     ),
-                    if (pos != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${pos.latitude.toStringAsFixed(2)}, '
-                            '${pos.longitude.toStringAsFixed(2)}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.refresh, size: 18),
-                            onPressed: () async => _initLocation(),
-                            tooltip: 'Konumu yenile',
-                          ),
-                        ],
-                      ),
                   ],
                 ),
               ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/medicine_result.dart';
+import '../analytics_helper.dart';
+
 
 class MedicineDetailPage extends StatelessWidget {
   final MedicineResult medicine;
@@ -40,6 +42,10 @@ class MedicineDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AnalyticsHelper.logMedicineDetailView(
+    barcode: medicine.barcode ?? 'no_barcode',
+    name: medicine.name,);
+    
     final theme = Theme.of(context);
 
     return Scaffold(

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "30438328248",
+    "project_id": "nobetci-eczane-def1c",
+    "storage_bucket": "nobetci-eczane-def1c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:30438328248:android:bfcbcf59ac502ab2f9314d",
+        "android_client_info": {
+          "package_name": "com.ock.nobetci_eczane"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAri5XajNwfJwB05A8pLyrWYxgmg24anrI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

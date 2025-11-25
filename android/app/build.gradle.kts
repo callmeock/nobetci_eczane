@@ -3,6 +3,9 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -15,7 +18,10 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.ock.nobetcieczane"
+    // 🔴 ESKİ: namespace = "com.ock.nobetcieczane"
+    // ✅ YENİ:
+    namespace = "com.ock.nobetci_eczane"
+
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -50,18 +56,17 @@ android {
     }
 
     buildTypes {
-    getByName("release") {
-        // 🔐 Release imzan burada kalsın
-        signingConfig = signingConfigs.getByName("release")
+        getByName("release") {
+            // 🔐 Release imzan burada kalsın
+            signingConfig = signingConfigs.getByName("release")
 
-        // 🔽 ÖNEMLİ: Kod küçültmeyi açıyoruz
-        isMinifyEnabled = true
+            // 🔽 ÖNEMLİ: Kod küçültmeyi açıyoruz
+            isMinifyEnabled = true
 
-        // Eğer plugin shrinkResources açıyorsa sorun çıkmasın diye biz de açık tanımlayalım:
-        isShrinkResources = true
+            // Eğer plugin shrinkResources açıyorsa sorun çıkmasın diye biz de açık tanımlayalım:
+            isShrinkResources = true
+        }
     }
-}
-
 }
 
 flutter {

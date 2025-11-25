@@ -6,6 +6,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../analytics_helper.dart';
+import '../models/medicine_reminder.dart';
+
 class MedicineReminderPage extends StatefulWidget {
   const MedicineReminderPage({super.key});
 
@@ -20,6 +23,8 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
       TextEditingController(text: '2');
   final TextEditingController _daysController =
       TextEditingController(text: '5');
+  final TextEditingController _intervalDaysController =
+      TextEditingController(text: '1'); // 🔥 kaç günde bir
 
   String _mealTiming = 'Tok';
   DateTime _startDate = DateTime.now();
@@ -44,6 +49,7 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
     _doseController.dispose();
     _timesPerDayController.dispose();
     _daysController.dispose();
+    _intervalDaysController.dispose();
     super.dispose();
   }
 
@@ -107,21 +113,25 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
 
     final totalDays = reminder.totalDays;
     final timesPerDay = reminder.timesPerDay.clamp(1, 4); // 1–4 arası sınırla
+    final intervalDays = reminder.intervalDays.clamp(1, 365);
 
     // Basit dağıtım: her doz arası ~4 saat artış (max 4 doz için)
     const perDoseHourOffset = 4;
 
-    for (int dayOffset = 0; dayOffset < totalDays; dayOffset++) {
+    final List<int> createdIds = [];
+
+    for (int dayOffset = 0; dayOffset < totalDays; dayOffset += intervalDays) {
       final dayBase = baseDateTime.add(Duration(days: dayOffset));
 
       for (int i = 0; i < timesPerDay; i++) {
         final scheduledTime =
-            dayBase.add(Duration(hours: i * perDoseHourOffset));
+            dayBase.add(const Duration(hours: perDoseHourOffset) * i);
 
         // Geçmiş bir zamana bildirim schedule etme
         if (scheduledTime.isBefore(now)) continue;
 
         final id = await _getNextNotificationId();
+        createdIds.add(id);
 
         const androidDetails = AndroidNotificationDetails(
           'medicine_reminders',
@@ -150,6 +160,9 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
         );
       }
     }
+
+    // Oluşan ID'leri hatırlatmanın içine yaz
+    reminder.notificationIds.addAll(createdIds);
   }
 
   // -----------------------------
@@ -390,13 +403,29 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
   }
 
   void _onAddReminder() async {
+    // 🔹 Önce exact alarm izni iste (Android 13+ zorunlu)
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      final granted = await androidPlugin.requestExactAlarmsPermission();
+      if (granted != true) {
+        _showSnackBar('Lütfen bildirimler için tam zamanlama izni ver.');
+        return;
+      }
+    }
+
     // 🔹 Önce klavyeyi kapat
     FocusScope.of(context).unfocus();
 
     final name = _nameController.text.trim();
     final dose = _doseController.text.trim();
-    final timesPerDay = int.tryParse(_timesPerDayController.text.trim());
+    final timesPerDay =
+        int.tryParse(_timesPerDayController.text.trim());
     final days = int.tryParse(_daysController.text.trim());
+    final intervalDays =
+        int.tryParse(_intervalDaysController.text.trim());
 
     if (name.isEmpty) {
       _showSnackBar('Lütfen ilaç adını gir.');
@@ -407,11 +436,16 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
       return;
     }
     if (timesPerDay > 4) {
-      _showSnackBar('Şu an en fazla günde 4 kez için hatırlatma destekleniyor.');
+      _showSnackBar(
+          'Şu an en fazla günde 4 kez için hatırlatma destekleniyor.');
       return;
     }
     if (days == null || days <= 0) {
       _showSnackBar('Kaç gün kullanacağını doğru gir.');
+      return;
+    }
+    if (intervalDays == null || intervalDays <= 0) {
+      _showSnackBar('Kaç günde bir kullanacağını doğru gir.');
       return;
     }
 
@@ -421,10 +455,15 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
       mealTiming: _mealTiming,
       timesPerDay: timesPerDay,
       totalDays: days,
+      intervalDays: intervalDays,
       startDate: _startDate,
       firstReminderHour: _firstReminderTime.hour,
       firstReminderMinute: _firstReminderTime.minute,
+      notificationIds: [],
     );
+
+    // Bildirimleri planla ve ID'leri modele ekle
+    await _scheduleNotificationsFor(reminder);
 
     setState(() {
       _reminders.add(reminder);
@@ -432,13 +471,21 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
       _doseController.clear();
       _timesPerDayController.text = '2';
       _daysController.text = '5';
+      _intervalDaysController.text = '1';
       _mealTiming = 'Tok';
       _startDate = DateTime.now();
       _firstReminderTime = const TimeOfDay(hour: 9, minute: 0);
     });
 
     await _saveRemindersToStorage();
-    await _scheduleNotificationsFor(reminder);
+
+    // 🔥 Analytics: Hatırlatma logu
+    await AnalyticsHelper.logMedicineReminderCreated(
+      barcode: reminder.name,
+      name: reminder.name,
+      timesPerDay: reminder.timesPerDay,
+      days: reminder.totalDays,
+    );
 
     _showSnackBar(
       'İlaç hatırlatması kaydedildi ve bildirimler oluşturuldu.',
@@ -446,9 +493,17 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
   }
 
   void _onDeleteReminder(int index) async {
+    final reminder = _reminders[index];
+
+    // 🔥 Tüm planlı bildirimleri iptal et
+    for (final id in reminder.notificationIds) {
+      await _notifications.cancel(id);
+    }
+
     setState(() {
       _reminders.removeAt(index);
     });
+
     await _saveRemindersToStorage();
   }
 
@@ -578,6 +633,21 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                           ),
                           const SizedBox(width: 10),
                           Expanded(
+                            child: TextField(
+                              controller: _intervalDaysController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Kaç günde bir?',
+                                hintText: 'Örn: 2',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
                             child: InkWell(
                               onTap: _pickStartDate,
                               borderRadius: BorderRadius.circular(14),
@@ -596,25 +666,28 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                               ),
                             ),
                           ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: InkWell(
+                              onTap: _showTimePickerSheet,
+                              borderRadius: BorderRadius.circular(14),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'İlk hatırlatma saati',
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                        _formatTimeOfDay(_firstReminderTime)),
+                                    const Icon(Icons.access_time, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: 10),
-                      InkWell(
-                        onTap: _showTimePickerSheet,
-                        borderRadius: BorderRadius.circular(14),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'İlk hatırlatma saati',
-                          ),
-                          child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(_formatTimeOfDay(_firstReminderTime)),
-                              const Icon(Icons.access_time, size: 18),
-                            ],
-                          ),
-                        ),
                       ),
                       const SizedBox(height: 14),
                       SizedBox(
@@ -706,7 +779,7 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
                                           size: 18),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'Günde ${r.timesPerDay} kez • ${r.totalDays} gün',
+                                        'Günde ${r.timesPerDay} kez • ${r.totalDays} gün • ${r.intervalDays} günde bir',
                                         style: theme
                                             .textTheme.bodySmall
                                             ?.copyWith(
@@ -787,54 +860,6 @@ class _MedicineReminderPageState extends State<MedicineReminderPage> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class MedicineReminder {
-  final String name;
-  final String? dose;
-  final String mealTiming;
-  final int timesPerDay;
-  final int totalDays;
-  final DateTime startDate;
-  final int firstReminderHour;
-  final int firstReminderMinute;
-
-  MedicineReminder({
-    required this.name,
-    required this.mealTiming,
-    required this.timesPerDay,
-    required this.totalDays,
-    required this.startDate,
-    required this.firstReminderHour,
-    required this.firstReminderMinute,
-    this.dose,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'dose': dose,
-      'mealTiming': mealTiming,
-      'timesPerDay': timesPerDay,
-      'totalDays': totalDays,
-      'startDate': startDate.toIso8601String(),
-      'firstReminderHour': firstReminderHour,
-      'firstReminderMinute': firstReminderMinute,
-    };
-  }
-
-  factory MedicineReminder.fromJson(Map<String, dynamic> json) {
-    return MedicineReminder(
-      name: json['name'] as String,
-      dose: json['dose'] as String?,
-      mealTiming: json['mealTiming'] as String? ?? 'Tok',
-      timesPerDay: json['timesPerDay'] as int? ?? 1,
-      totalDays: json['totalDays'] as int? ?? 1,
-      startDate: DateTime.parse(json['startDate'] as String),
-      firstReminderHour: json['firstReminderHour'] as int? ?? 9,
-      firstReminderMinute: json['firstReminderMinute'] as int? ?? 0,
     );
   }
 }
